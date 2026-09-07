@@ -3,3 +3,8 @@
 *.test
 *.rdb
 *.aof
+
+# Non-project material (tooling/scratch, not shipped source)
+/.claude/
+/.superpowers/
+/docs/
