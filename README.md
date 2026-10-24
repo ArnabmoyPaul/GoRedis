@@ -10,7 +10,7 @@
 [![Build Status](https://img.shields.io/badge/build-add_CI_workflow-inactive)](#-roadmap)
 [![Protocol](https://img.shields.io/badge/protocol-RESP2-DC382D?logo=redis&logoColor=white)](https://redis.io/docs/latest/develop/reference/protocol-spec/)
 
-[![GoRedis demo placeholder, replace with a terminal GIF of redis-cli talking to GoRedis](https://via.placeholder.com/900x420.png?text=GoRedis+Demo+%28replace+with+terminal+GIF%29)](#-usage--examples)
+![GoRedis demo: a real redis-cli session against the live GoRedis server](assets/demo.gif)
 
 *Speaks real RESP2. Any real Redis client, including `redis-cli`, can talk to it without knowing the difference.*
 
@@ -60,7 +60,26 @@ Learning how Redis actually works by reading its C source is a slog: decades of 
 
 ### Architecture / How It Works
 
-[![Architecture diagram placeholder, replace with a diagram of the TCP connection, RESP Reader, Dispatch, and Store flow](https://via.placeholder.com/800x360.png?text=Architecture+Diagram+%28placeholder%29)](#)
+```mermaid
+flowchart LR
+    client["Redis client<br/>redis-cli / nc / any RESP2 lib"]
+
+    subgraph GoRedis
+        listener["net.Listener<br/>cmd/server + internal/server"]
+        reader["resp.Reader<br/>parses RESP arrays & inline cmds"]
+        dispatch["commands.Dispatch<br/>table lookup by command name"]
+        store[("storage.Store<br/>map[string]string + sync.RWMutex")]
+        encode["Value.Encode()<br/>back to RESP bytes"]
+    end
+
+    client -- "RESP bytes over TCP" --> listener
+    listener -- "goroutine per connection" --> reader
+    reader -- "args []string" --> dispatch
+    dispatch -- "Get/Set/Incr/..." --> store
+    store --> dispatch
+    dispatch -- "resp.Value" --> encode
+    encode -- "reply" --> client
+```
 
 GoRedis is organized as one Go package per responsibility: no god-objects, no shared mutable globals outside the store.
 
@@ -203,7 +222,7 @@ reply = commands.Dispatch(store, []string{"GET", "foo"})
 // reply == resp.BulkStringValue("bar")
 ```
 
-[![Terminal usage placeholder, replace with a screen recording of a redis-cli session](https://via.placeholder.com/900x300.png?text=Terminal+Session+%28placeholder%29)](#)
+![Real redis-cli session captured against a live GoRedis instance](assets/demo.gif)
 
 ---
 
